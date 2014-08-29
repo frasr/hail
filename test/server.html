@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Server</title>
+    <script src="../hail.js"></script>
+    <script>
+
+    Hail({
+        add: function (a, b, done) {
+            done(a + b);
+        },
+        read: function (key, done) {
+            done(JSON.parse(localStorage[key]));
+        },
+        write: function (key, val) {
+            localStorage[key] = JSON.stringify(val);
+        },
+        delayedAdd: function (a, b, done) {
+            setTimeout(function () {
+                done(a+b);
+            }, 100);
+        },
+        echo: function (arg, done) {
+            done(arg);
+        }
+    });
+
+
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
