@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>hail.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>hail.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <pre><code>hail.js <span class="hljs-number">0.1</span>
+http:<span class="hljs-comment">//www.frasr.com</span>
+(c) <span class="hljs-number">2014</span> John Fraser
+Hail may be freely distributed under the MIT license.
+Comments formatted <span class="hljs-keyword">for</span> Docco.
+</code></pre>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(root)</span> </span>{
+<span class="hljs-pi">    "use strict"</span>;
+
+    root.Hail = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(url, api, onConnect)</span> </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>We’ll handle arguments ourselves</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> win, domain, args = slice(<span class="hljs-built_in">arguments</span>);
+        url = api = onConnect = <span class="hljs-literal">undefined</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <h2 id="process-arguments">Process arguments</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Get <code>win</code> from <code>url</code> or <code>iframe</code>.
+To fight xss, we only accept messages from the same domain
+as <code>url</code> or <code>iframe.src</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> args[<span class="hljs-number">0</span>] === <span class="hljs-string">"string"</span>) {
+            url = args.shift();
+            domready(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+                <span class="hljs-keyword">var</span> iframe = makeIFrame(url);
+                domain = domainFromURL(iframe.src);
+                win = iframe.contentWindow;
+            });
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (args[<span class="hljs-number">0</span>].tagName === <span class="hljs-string">"iframe"</span>) {
+            <span class="hljs-keyword">var</span> iframe = args.shift();
+            win = iframe.contentWindow;
+            domain = domainFromURL(iframe.src)
+        } <span class="hljs-keyword">else</span> {
+            win = <span class="hljs-built_in">window</span>.parent;
+            domain = domainFromURL(<span class="hljs-built_in">document</span>.referrer);
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Get <code>api</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> args[<span class="hljs-number">0</span>] === <span class="hljs-string">"object"</span>) {
+            api = args.shift();
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Get <code>onConnect()</code> callback</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        onConnect = args.shift();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <h2 id="set-up-lookup-table-for-local-api">Set up lookup table for local API</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Build <code>lut</code> to map names to functions.
+If we call a remote API, we’ll also store a return callback here under a random <code>luid()</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> lut = {};</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Add local API to <code>lut</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (api) <span class="hljs-built_in">Object</span>.keys(api).forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(key)</span> </span>{
+            lut[key] = api[key];
+        });</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Add handhake handler to <code>lut</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        lut[<span class="hljs-string">"$handshake"</span>] = handshake;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <h2 id="handle-handshake-request">Handle handshake request</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Add hardwired handshake handler to <code>lut</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">handshake</span><span class="hljs-params">(remoteAPI, debug)</span> </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>If the other is debugging, enter debug mode too</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            Hail.debug = Hail.debug || debug;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Build a single stub function.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">makeStub</span><span class="hljs-params">(name)</span> </span>{
+                <span class="hljs-keyword">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+                    <span class="hljs-keyword">var</span> args = slice(<span class="hljs-built_in">arguments</span>), callbackID = luid();
+                    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> args[args.length-<span class="hljs-number">1</span>] === <span class="hljs-string">"function"</span>) {
+                        <span class="hljs-keyword">var</span> cb = args.pop();</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Register one-time-use return callback.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                        lut[callbackID] = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+                            <span class="hljs-keyword">delete</span> lut[callbackID];
+                            cb.apply(<span class="hljs-keyword">this</span>,<span class="hljs-built_in">arguments</span>);
+                        }
+                    }
+                    send(name,args,callbackID);
+                }
+            }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Only accept handshake once.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">delete</span> lut[<span class="hljs-string">"$handshake"</span>];</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Build stubs for remote API.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (remoteAPI &amp;&amp; onConnect) {
+                <span class="hljs-keyword">var</span> stubs = {};
+                <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; remoteAPI.length; i++) {
+                    stubs[remoteAPI[i]] = makeStub(remoteAPI[i])
+                }
+                onConnect(stubs);
+            }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>If we have a local API to share, send handshake back.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (api) sendHandshake();
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Helper to send handshake with local API, if present</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendHandshake</span><span class="hljs-params">()</span> </span>{
+            send(<span class="hljs-string">"$handshake"</span>, api ? [<span class="hljs-built_in">Object</span>.keys(api)] : [], Hail.debug);
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <h2 id="send-and-receive-function-calls-via-postmessage">Send and receive function calls via postMessage</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Send function call as message.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span><span class="hljs-params">(name,args,callbackID)</span> </span>{
+            <span class="hljs-keyword">var</span> obj = {name:name,args:args,cb:callbackID};
+            log(<span class="hljs-string">"sending"</span>,obj,domain||<span class="hljs-string">"*"</span>);
+            win.postMessage(obj, domain||<span class="hljs-string">"*"</span>);
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Recieve message, do security checks, and call function.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">receive</span><span class="hljs-params">(e)</span> </span>{
+            <span class="hljs-keyword">var</span> data = e.data, args = slice(data.args);
+            <span class="hljs-keyword">if</span> (e.source !== win) <span class="hljs-keyword">return</span>;
+            <span class="hljs-keyword">if</span> (domain &amp;&amp; domain !== e.origin) <span class="hljs-keyword">return</span>;
+
+            log(<span class="hljs-string">"received"</span>,data,domain||<span class="hljs-string">"*"</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>Find function being called by remote client.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">var</span> fn = lut[data.name];</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>Call it or complain that it’s missing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (fn) {
+                fn.apply({event:e},args.concat([<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(cbArgs)</span> </span>{
+                    <span class="hljs-keyword">if</span> (data.cb) send(data.cb, slice(<span class="hljs-built_in">arguments</span>));
+                }]));
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Unknown function: "</span>+data.name);
+            }
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <h2 id="start-it">Start it</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Listen for messages.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-built_in">window</span>.addEventListener(<span class="hljs-string">"message"</span>, receive, <span class="hljs-literal">true</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>Send initial handshake.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        domready(sendHandshake);
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <h2 id="utilities">Utilities</h2>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>A locally unique id for callbacks.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">luid</span><span class="hljs-params">()</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-string">"id"</span>+<span class="hljs-built_in">Math</span>.floor(<span class="hljs-built_in">Math</span>.random()*<span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>,<span class="hljs-number">32</span>)); }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>Slice, for turning arguments objects into arrays.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">slice</span><span class="hljs-params">(list,start,finish)</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-built_in">Array</span>.prototype.slice.call(list,start,finish); }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>Given a URL, find the domain for postMessage.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domainFromURL</span><span class="hljs-params">(url)</span> </span>{ <span class="hljs-keyword">return</span> url.match(<span class="hljs-regexp">/^(\w+:\/\/[^\/]+|)/</span>)[<span class="hljs-number">1</span>].toLowerCase(); }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>Distilled from domready (c)Dustin Diaz 2014 - License MIT.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domready</span><span class="hljs-params">(fn)</span> </span>{/^loaded|^c/.test(<span class="hljs-built_in">document</span>.readyState) ? fn() : <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">"DOMContentLoaded"</span>,fn);}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>Open a hidden <code>iframe</code> with the given URL.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">makeIFrame</span><span class="hljs-params">(url)</span> </span>{
+        <span class="hljs-keyword">var</span> iframe = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">"iframe"</span>);
+        iframe.style.display = <span class="hljs-string">"none"</span>;
+        iframe.src = url;
+        <span class="hljs-built_in">document</span>.body.appendChild(iframe);
+        <span class="hljs-keyword">return</span> iframe;
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>If <code>Hail.debug</code> is true, output logging info.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">log</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">var</span> isTop = (<span class="hljs-built_in">window</span> === top), clientName = isTop ? <span class="hljs-string">"Top"</span> : <span class="hljs-string">"IFrame"</span>;
+        <span class="hljs-keyword">if</span> (Hail.debug) <span class="hljs-built_in">console</span>.log.apply(<span class="hljs-built_in">console</span>,[clientName+<span class="hljs-string">":"</span>].concat(slice(<span class="hljs-built_in">arguments</span>)));
+    }
+
+})(<span class="hljs-built_in">window</span>);</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

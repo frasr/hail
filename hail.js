@@ -2,105 +2,122 @@
 //     http://www.frasr.com
 //     (c) 2014 John Fraser
 //     Hail may be freely distributed under the MIT license.
+//     Comments formatted for Docco.
 
-
-
-(function () {
+(function (root) {
     "use strict";
 
-    var root = this;
+    root.Hail = function (url, api, onConnect) {
 
-    // Hail enables simple cross-domain function calls in the browser.
-    //
-    // Example:
-    //
-    //     // Server, at http://server.com/hail.html
-    //     var api = {
-    //         greeting: function (cb) {
-    //             cb("Hello from "+document.domain);
-    //         }
-    //     }
-    //     Hail(api);
+        // We'll handle arguments ourselves
+        var win, domain, args = slice(arguments);
+        url = api = onConnect = undefined;
 
-    //     // Client, on another domain
-    //     function connected(api) {
-    //         api.greeting(function (message) {
-    //             console.log(message);
-    //         });
-    //     }
-    //     Hail("http://server.com/hail.html",connected);
-    //
-    //     // ouput: "Hello from server.com"
-    //
-    // Usage:
-    //
-    //     Hail(url, localAPI, function (remoteAPI) {});
-    //     Hail(iframe, localAPI, function (remoteAPI) {});
-    //
-    // All parameters are optional. If `url` or `iframe` isn't included,
-    // Hail connects to the parent window.
+        // Process arguments
+        // -----------------
 
-    root.Hail = function (win, apiOrCB) {
+        // Get `win` from `url` or `iframe`.
+        // To fight xss, we only accept messages from the same domain
+        // as `url` or `iframe.src`.
 
-        var api, cb, domain;
-        if (arguments.length < 2) {
-            apiOrCB = win;
+        if (typeof args[0] === "string") {
+            url = args.shift();
+            domready(function () {
+                var iframe = makeIFrame(url);
+                domain = domainFromURL(iframe.src);
+                win = iframe.contentWindow;
+            });
+        } else if (args[0].tagName === "iframe") {
+            var iframe = args.shift();
+            win = iframe.contentWindow;
+            domain = domainFromURL(iframe.src)
+        } else {
             win = window.parent;
             domain = domainFromURL(document.referrer);
         }
-        if (typeof win === "string") {
-            domready(function () {
-                win = makeIFrame(win);
-                domain = domainFromURL(win.src);
-                win = win.contentWindow;
-            });
-        }
-        if (!win.postMessage && win.contentWindow) win = win.contentWindow;
-        cb = (typeof apiOrCB === "function") ? apiOrCB : undefined;
-        api = (typeof apiOrCB === "object") ? apiOrCB : undefined;
 
-        var lut = {
-            handshake: function (remoteAPI) {
-                delete lut["handshake"];
-                if (remoteAPI && cb) {
-                    var stubs = {};
-                    for (var i = 0; i < remoteAPI.length; i++) {
-                        stubs[remoteAPI[i]] = makeStub(remoteAPI[i])
-                    }
-                    cb(stubs);
-                }
-                if (api) sendHandshake();
-            }
-        };
-        // if (api) extend(lut,api);
+        // Get `api`
+        if (typeof args[0] === "object") {
+            api = args.shift();
+        }
+
+        // Get `onConnect()` callback
+        onConnect = args.shift();
+
+        // Set up lookup table for local API
+        // ---------------------------------
+
+        // Build `lut` to map names to functions.
+        // If we call a remote API, we'll also store a return callback here under a random `luid()`.
+        var lut = {};
+
+        // Add local API to `lut`.
         if (api) Object.keys(api).forEach(function (key) {
             lut[key] = api[key];
         });
 
-        function sendHandshake() {
-            send({name:"handshake",args: api ? [Object.keys(api)] : []});
-        }
+        // Add handhake handler to `lut`.
+        lut["$handshake"] = handshake;
 
-        function makeStub(name) {
-            return function () {
-                var args = slice(arguments), callbackID = luid();
-                if (typeof args[args.length-1] === "function") {
-                    var cb = args.pop();
-                    lut[callbackID] = function () {
-                        delete lut[callbackID];
-                        cb.apply(this,arguments);
+
+        // Handle handshake request
+        // ------------------------
+
+        // Add hardwired handshake handler to `lut`.
+        function handshake(remoteAPI, debug) {
+            // If the other is debugging, enter debug mode too
+            Hail.debug = Hail.debug || debug;
+
+            // Build a single stub function.
+            function makeStub(name) {
+                return function () {
+                    var args = slice(arguments), callbackID = luid();
+                    if (typeof args[args.length-1] === "function") {
+                        var cb = args.pop();
+                        // Register one-time-use return callback.
+                        lut[callbackID] = function () {
+                            delete lut[callbackID];
+                            cb.apply(this,arguments);
+                        }
                     }
+                    send(name,args,callbackID);
                 }
-                send({name:name,args:args,cb:callbackID});
             }
+
+            // Only accept handshake once.
+            delete lut["$handshake"];
+
+            // Build stubs for remote API.
+            if (remoteAPI && onConnect) {
+                var stubs = {};
+                for (var i = 0; i < remoteAPI.length; i++) {
+                    stubs[remoteAPI[i]] = makeStub(remoteAPI[i])
+                }
+                onConnect(stubs);
+            }
+
+            // If we have a local API to share, send handshake back.
+            if (api) sendHandshake();
         }
 
-        function send(obj) {
-            console.log(win);
+        // Helper to send handshake with local API, if present
+        function sendHandshake() {
+            send("$handshake", api ? [Object.keys(api)] : [], Hail.debug);
+        }
+
+
+
+        // Send and receive function calls via postMessage
+        // -----------------------------------------------
+
+        // Send function call as message.
+        function send(name,args,callbackID) {
+            var obj = {name:name,args:args,cb:callbackID};
             log("sending",obj,domain||"*");
             win.postMessage(obj, domain||"*");
         }
 
+        // Recieve message, do security checks, and call function.
         function receive(e) {
             var data = e.data, args = slice(data.args);
             if (e.source !== win) return;
@@ -108,37 +125,45 @@
 
             log("received",data,domain||"*");
 
+            // Find function being called by remote client.
             var fn = lut[data.name];
 
+            // Call it or complain that it's missing.
             if (fn) {
                 fn.apply({event:e},args.concat([function (cbArgs) {
-                    if (data.cb) send({name:data.cb,args:slice(arguments)});
+                    if (data.cb) send(data.cb, slice(arguments));
                 }]));
             } else {
-                log("Unknown function: "+data.name);
+                console.log("Unknown function: "+data.name);
             }
         }
 
+        // Start it
+        // --------
+
+        // Listen for messages.
         window.addEventListener("message", receive, true);
+
+        // Send initial handshake.
         domready(sendHandshake);
     }
 
     // Utilities
     // ---------
 
-    // A locally unique id, for callbacks
+    // A locally unique id for callbacks.
     function luid() { return "id"+Math.floor(Math.random()*Math.pow(2,32)); }
 
-    // Slice, for turning arguments objects into arrays
+    // Slice, for turning arguments objects into arrays.
     function slice(list,start,finish) { return Array.prototype.slice.call(list,start,finish); }
 
-    // Given a URL, find the domain for postMessage
+    // Given a URL, find the domain for postMessage.
     function domainFromURL(url) { return url.match(/^(\w+:\/\/[^\/]+|)/)[1].toLowerCase(); }
 
-    // Distilled from domready (c) Dustin Diaz 2014 - License MIT
+    // Distilled from domready (c)Dustin Diaz 2014 - License MIT.
     function domready(fn) {/^loaded|^c/.test(document.readyState) ? fn() : document.addEventListener("DOMContentLoaded",fn);}
 
-    // Open a hidden iframe with the given URL
+    // Open a hidden `iframe` with the given URL.
     function makeIFrame(url) {
         var iframe = document.createElement("iframe");
         iframe.style.display = "none";
@@ -147,12 +172,12 @@
         return iframe;
     }
 
-    // If Hail.debug is true, output logging info
+    // If `Hail.debug` is true, output logging info.
     function log() {
         var isTop = (window === top), clientName = isTop ? "Top" : "IFrame";
         if (Hail.debug) console.log.apply(console,[clientName+":"].concat(slice(arguments)));
     }
 
-}).call(this);
+})(window);
 
 
