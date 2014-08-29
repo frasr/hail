@@ -63,7 +63,7 @@
         // Handle handshake request
         // ------------------------
 
-        // Add hardwired handshake handler to `lut`.
+        // Respond to incoming handshake by building local stubs, sending our own API.
         function handshake(remoteAPI, debug) {
             // If the other is debugging, enter debug mode too
             Hail.debug = Hail.debug || debug;
