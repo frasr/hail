@@ -20,9 +20,14 @@
                 done(a+b);
             }, 100);
         },
+        ping: function (done) {
+            done();
+        },
         echo: function (arg, done) {
             done(arg);
         }
+    },function () {
+    	console.log("GOT IT");
     });
 
 

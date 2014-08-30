@@ -257,7 +257,7 @@ If we call a remote API, we’ll also store a return callback here under a rando
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">handshake</span><span class="hljs-params">(remoteAPI, debug)</span> </span>{</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">handshake</span><span class="hljs-params">(remoteAPI, isResponse, debug)</span> </span>{</pre></div></div>
             
         </li>
         
@@ -364,7 +364,7 @@ If we call a remote API, we’ll also store a return callback here under a rando
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (api) sendHandshake();
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (!isResponse) sendHandshake(<span class="hljs-literal">true</span>);
         }</pre></div></div>
             
         </li>
@@ -380,8 +380,9 @@ If we call a remote API, we’ll also store a return callback here under a rando
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendHandshake</span><span class="hljs-params">()</span> </span>{
-            send(<span class="hljs-string">"$handshake"</span>, api ? [<span class="hljs-built_in">Object</span>.keys(api)] : [], Hail.debug);
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sendHandshake</span><span class="hljs-params">(isResponse)</span> </span>{
+            <span class="hljs-keyword">var</span> names = api ? <span class="hljs-built_in">Object</span>.keys(api) : []
+            send(<span class="hljs-string">"$handshake"</span>, [names, isResponse, Hail.debug]);
         }</pre></div></div>
             
         </li>
@@ -418,15 +419,9 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-25">&#182;</a>
               </div>
-              <p>Send function call as message.</p>
+              <p>IE9 <code>postMessage</code> only supports strings.</p>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span><span class="hljs-params">(name,args,callbackID)</span> </span>{
-            <span class="hljs-keyword">var</span> obj = {name:name,args:args,cb:callbackID};
-            log(<span class="hljs-string">"sending"</span>,obj,domain||<span class="hljs-string">"*"</span>);
-            win.postMessage(obj, domain||<span class="hljs-string">"*"</span>);
-        }</pre></div></div>
             
         </li>
         
@@ -437,16 +432,18 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
-              <p>Recieve message, do security checks, and call function.</p>
-
+              <pre><code>TODO: nicer browser detection.
+</code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">receive</span><span class="hljs-params">(e)</span> </span>{
-            <span class="hljs-keyword">var</span> data = e.data, args = slice(data.args);
-            <span class="hljs-keyword">if</span> (e.source !== win) <span class="hljs-keyword">return</span>;
-            <span class="hljs-keyword">if</span> (domain &amp;&amp; domain !== e.origin) <span class="hljs-keyword">return</span>;
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">isIE</span><span class="hljs-params">()</span> </span>{
+          <span class="hljs-keyword">var</span> myNav = navigator.userAgent.toLowerCase();
+          <span class="hljs-keyword">return</span> (myNav.indexOf(<span class="hljs-string">'msie'</span>) != -<span class="hljs-number">1</span>) ? <span class="hljs-built_in">parseInt</span>(myNav.split(<span class="hljs-string">'msie'</span>)[<span class="hljs-number">1</span>]) : <span class="hljs-literal">Infinity</span>;
+        }
+        <span class="hljs-keyword">var</span> oldIE = isIE() &amp;&amp; isIE() &lt; <span class="hljs-number">10</span>;
 
-            log(<span class="hljs-string">"received"</span>,data,domain||<span class="hljs-string">"*"</span>);</pre></div></div>
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">pack</span><span class="hljs-params">(obj)</span> </span>{ <span class="hljs-keyword">return</span> oldIE ? <span class="hljs-built_in">JSON</span>.stringify(obj) : obj; }
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">unpack</span><span class="hljs-params">(val)</span> </span>{ <span class="hljs-keyword">return</span> oldIE ? <span class="hljs-built_in">JSON</span>.parse(val) : val; }</pre></div></div>
             
         </li>
         
@@ -457,11 +454,15 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
-              <p>Find function being called by remote client.</p>
+              <p>Send function call as message.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">var</span> fn = lut[data.name];</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">send</span><span class="hljs-params">(name,args,callbackID)</span> </span>{
+            <span class="hljs-keyword">var</span> obj = {name:name,args:args,cb:callbackID};
+            log(<span class="hljs-string">"sending"</span>,obj,domain||<span class="hljs-string">"*"</span>);
+            win.postMessage(pack(obj), domain||<span class="hljs-string">"*"</span>);
+        }</pre></div></div>
             
         </li>
         
@@ -472,18 +473,16 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
-              <p>Call it or complain that it’s missing.</p>
+              <p>Recieve message, do security checks, and call function.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (fn) {
-                fn.apply({event:e},args.concat([<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(cbArgs)</span> </span>{
-                    <span class="hljs-keyword">if</span> (data.cb) send(data.cb, slice(<span class="hljs-built_in">arguments</span>));
-                }]));
-            } <span class="hljs-keyword">else</span> {
-                <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"Unknown function: "</span>+data.name);
-            }
-        }</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">receive</span><span class="hljs-params">(e)</span> </span>{
+            <span class="hljs-keyword">var</span> data = unpack(e.data), args = slice(data.args);
+            <span class="hljs-keyword">if</span> (e.source !== win) <span class="hljs-keyword">return</span>;
+            <span class="hljs-keyword">if</span> (domain &amp;&amp; domain !== e.origin) <span class="hljs-keyword">return</span>;
+
+            log(<span class="hljs-string">"received"</span>,data,domain||<span class="hljs-string">"*"</span>);</pre></div></div>
             
         </li>
         
@@ -494,9 +493,11 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
-              <h2 id="start-it">Start it</h2>
+              <p>Find function being called by remote client.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">var</span> fn = lut[data.name];</pre></div></div>
             
         </li>
         
@@ -507,8 +508,19 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
-              
+              <p>Call it or complain that it’s missing.</p>
+
             </div>
+            
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (fn) {
+                <span class="hljs-keyword">if</span> (data.cb) args.push(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(cbArgs)</span> </span>{
+                    send(data.cb, slice(<span class="hljs-built_in">arguments</span>));
+                });
+                fn.apply({event:e},args);
+            } <span class="hljs-keyword">else</span> {
+                log(<span class="hljs-string">"Hail received call to unknown function '"</span>+data.name+<span class="hljs-string">"'"</span>);
+            }
+        }</pre></div></div>
             
         </li>
         
@@ -519,11 +531,9 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
-              <p>Listen for messages.</p>
+              <h2 id="start-it">Start it</h2>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-built_in">window</span>.addEventListener(<span class="hljs-string">"message"</span>, receive, <span class="hljs-literal">true</span>);</pre></div></div>
             
         </li>
         
@@ -534,12 +544,8 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
-              <p>Send initial handshake.</p>
-
+              
             </div>
-            
-            <div class="content"><div class='highlight'><pre>        domready(sendHandshake);
-    }</pre></div></div>
             
         </li>
         
@@ -550,9 +556,11 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
-              <h2 id="utilities">Utilities</h2>
+              <p>Listen for messages.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-built_in">window</span>.addEventListener(<span class="hljs-string">"message"</span>, receive, <span class="hljs-literal">true</span>);</pre></div></div>
             
         </li>
         
@@ -563,8 +571,14 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
-              
+              <p>Send initial handshake.</p>
+
             </div>
+            
+            <div class="content"><div class='highlight'><pre>        domready(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+            sendHandshake(<span class="hljs-literal">false</span>);
+        });
+    }</pre></div></div>
             
         </li>
         
@@ -575,11 +589,9 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
-              <p>A locally unique id for callbacks.</p>
+              <h2 id="utilities">Utilities</h2>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">luid</span><span class="hljs-params">()</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-string">"id"</span>+<span class="hljs-built_in">Math</span>.floor(<span class="hljs-built_in">Math</span>.random()*<span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>,<span class="hljs-number">32</span>)); }</pre></div></div>
             
         </li>
         
@@ -590,11 +602,8 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
-              <p>Slice, for turning arguments objects into arrays.</p>
-
+              
             </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">slice</span><span class="hljs-params">(list,start,finish)</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-built_in">Array</span>.prototype.slice.call(list,start,finish); }</pre></div></div>
             
         </li>
         
@@ -605,11 +614,11 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
-              <p>Given a URL, find the domain for postMessage.</p>
+              <p>A locally unique id for callbacks.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domainFromURL</span><span class="hljs-params">(url)</span> </span>{ <span class="hljs-keyword">return</span> url.match(<span class="hljs-regexp">/^(\w+:\/\/[^\/]+|)/</span>)[<span class="hljs-number">1</span>].toLowerCase(); }</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">luid</span><span class="hljs-params">()</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-string">"id"</span>+<span class="hljs-built_in">Math</span>.floor(<span class="hljs-built_in">Math</span>.random()*<span class="hljs-built_in">Math</span>.pow(<span class="hljs-number">2</span>,<span class="hljs-number">32</span>)); }</pre></div></div>
             
         </li>
         
@@ -620,11 +629,11 @@ If we call a remote API, we’ll also store a return callback here under a rando
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
-              <p>Distilled from domready (c)Dustin Diaz 2014 - License MIT.</p>
+              <p>Slice, for turning arguments objects into arrays.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domready</span><span class="hljs-params">(fn)</span> </span>{/^loaded|^c/.test(<span class="hljs-built_in">document</span>.readyState) ? fn() : <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">"DOMContentLoaded"</span>,fn);}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">slice</span><span class="hljs-params">(list,start,finish)</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-built_in">Array</span>.prototype.slice.call(list||[],start,finish); }</pre></div></div>
             
         </li>
         
@@ -634,6 +643,36 @@ If we call a remote API, we’ll also store a return callback here under a rando
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>Given a URL, find the domain for postMessage.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domainFromURL</span><span class="hljs-params">(url)</span> </span>{ <span class="hljs-keyword">return</span> url.match(<span class="hljs-regexp">/^(\w+:\/\/[^\/]+|)/</span>)[<span class="hljs-number">1</span>].toLowerCase(); }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>Distilled from domready (c)Dustin Diaz 2014 - License MIT.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">domready</span><span class="hljs-params">(fn)</span> </span>{/^loaded|^c/.test(<span class="hljs-built_in">document</span>.readyState) ? fn() : <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">"DOMContentLoaded"</span>,fn);}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-41">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
               </div>
               <p>Open a hidden <code>iframe</code> with the given URL.</p>
 
@@ -650,19 +689,50 @@ If we call a remote API, we’ll also store a return callback here under a rando
         </li>
         
         
-        <li id="section-40">
+        <li id="section-42">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-40">&#182;</a>
+                <a class="pilcrow" href="#section-42">&#182;</a>
               </div>
               <p>If <code>Hail.debug</code> is true, output logging info.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">log</span><span class="hljs-params">()</span> </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">log</span><span class="hljs-params">()</span> </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-43">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-43">&#182;</a>
+              </div>
+              <p>In IE9 and earlier, console only exists when the debugger is open because Microsoft</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">window</span>.console) <span class="hljs-keyword">return</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-44">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+              <p>In IE9 and earlier, console.log doesn’t support apply() because Microsoft</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> smartLog = <span class="hljs-built_in">Function</span>.prototype.bind.call(<span class="hljs-built_in">console</span>.log,<span class="hljs-built_in">console</span>);
+
         <span class="hljs-keyword">var</span> isTop = (<span class="hljs-built_in">window</span> === top), clientName = isTop ? <span class="hljs-string">"Top"</span> : <span class="hljs-string">"IFrame"</span>;
-        <span class="hljs-keyword">if</span> (Hail.debug) <span class="hljs-built_in">console</span>.log.apply(<span class="hljs-built_in">console</span>,[clientName+<span class="hljs-string">":"</span>].concat(slice(<span class="hljs-built_in">arguments</span>)));
+        smartLog.apply(<span class="hljs-built_in">console</span>,[clientName+<span class="hljs-string">":"</span>].concat(slice(<span class="hljs-built_in">arguments</span>)));
     }
 
 })(<span class="hljs-built_in">window</span>);</pre></div></div>

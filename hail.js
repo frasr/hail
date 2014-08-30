@@ -64,7 +64,7 @@
         // ------------------------
 
         // Respond to incoming handshake by building local stubs, sending our own API.
-        function handshake(remoteAPI, debug) {
+        function handshake(remoteAPI, isResponse, debug) {
             // If the other is debugging, enter debug mode too
             Hail.debug = Hail.debug || debug;
 
@@ -97,12 +97,13 @@
             }
 
             // If we have a local API to share, send handshake back.
-            if (api) sendHandshake();
+            if (!isResponse) sendHandshake(true);
         }
 
         // Helper to send handshake with local API, if present
-        function sendHandshake() {
-            send("$handshake", api ? [Object.keys(api)] : [], Hail.debug);
+        function sendHandshake(isResponse) {
+            var names = api ? Object.keys(api) : []
+            send("$handshake", [names, isResponse, Hail.debug]);
         }
 
 
@@ -110,16 +111,28 @@
         // Send and receive function calls via postMessage
         // -----------------------------------------------
 
+        // IE9 `postMessage` only supports strings.
+
+        //     TODO: nicer browser detection.
+        function isIE() {
+          var myNav = navigator.userAgent.toLowerCase();
+          return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : Infinity;
+        }
+        var oldIE = isIE() && isIE() < 10;
+
+        function pack(obj) { return oldIE ? JSON.stringify(obj) : obj; }
+        function unpack(val) { return oldIE ? JSON.parse(val) : val; }
+
         // Send function call as message.
         function send(name,args,callbackID) {
             var obj = {name:name,args:args,cb:callbackID};
             log("sending",obj,domain||"*");
-            win.postMessage(obj, domain||"*");
+            win.postMessage(pack(obj), domain||"*");
         }
 
         // Recieve message, do security checks, and call function.
         function receive(e) {
-            var data = e.data, args = slice(data.args);
+            var data = unpack(e.data), args = slice(data.args);
             if (e.source !== win) return;
             if (domain && domain !== e.origin) return;
 
@@ -130,11 +143,12 @@
 
             // Call it or complain that it's missing.
             if (fn) {
-                fn.apply({event:e},args.concat([function (cbArgs) {
-                    if (data.cb) send(data.cb, slice(arguments));
-                }]));
+                if (data.cb) args.push(function (cbArgs) {
+                    send(data.cb, slice(arguments));
+                });
+                fn.apply({event:e},args);
             } else {
-                console.log("Unknown function: "+data.name);
+                log("Hail received call to unknown function '"+data.name+"'");
             }
         }
 
@@ -145,7 +159,9 @@
         window.addEventListener("message", receive, true);
 
         // Send initial handshake.
-        domready(sendHandshake);
+        domready(function () {
+            sendHandshake(false);
+        });
     }
 
     // Utilities
@@ -155,7 +171,7 @@
     function luid() { return "id"+Math.floor(Math.random()*Math.pow(2,32)); }
 
     // Slice, for turning arguments objects into arrays.
-    function slice(list,start,finish) { return Array.prototype.slice.call(list,start,finish); }
+    function slice(list,start,finish) { return Array.prototype.slice.call(list||[],start,finish); }
 
     // Given a URL, find the domain for postMessage.
     function domainFromURL(url) { return url.match(/^(\w+:\/\/[^\/]+|)/)[1].toLowerCase(); }
@@ -174,8 +190,14 @@
 
     // If `Hail.debug` is true, output logging info.
     function log() {
+        // In IE9 and earlier, console only exists when the debugger is open because Microsoft
+        if (!window.console) return;
+
+        // In IE9 and earlier, console.log doesn't support apply() because Microsoft
+        var smartLog = Function.prototype.bind.call(console.log,console);
+
         var isTop = (window === top), clientName = isTop ? "Top" : "IFrame";
-        if (Hail.debug) console.log.apply(console,[clientName+":"].concat(slice(arguments)));
+        smartLog.apply(console,[clientName+":"].concat(slice(arguments)));
     }
 
 })(window);
