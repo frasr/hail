@@ -170,9 +170,6 @@
     // A locally unique id for callbacks.
     function luid() { return "id"+Math.floor(Math.random()*Math.pow(2,32)); }
 
-    // Slice, for turning arguments objects into arrays.
-    function slice(list,start,finish) { return Array.prototype.slice.call(list||[],start,finish); }
-
     // Given a URL, find the domain for postMessage.
     function domainFromURL(url) { return url.match(/^(\w+:\/\/[^\/]+|)/)[1].toLowerCase(); }
 
