@@ -7,28 +7,31 @@
 
 		var storage = {};
 
-    Hail({
-        add: function (a, b, done) {
-            done(a + b);
-        },
-        read: function (key, done) {
-            done(JSON.parse(storage[key]));
-        },
-        write: function (key, val) {
-            storage[key] = JSON.stringify(val);
-        },
-        delayedAdd: function (a, b, done) {
-            setTimeout(function () {
-                done(a+b);
-            }, 100);
-        },
-        ping: function (done) {
-            done();
-        },
-        echo: function (arg, done) {
-            done(arg);
-        }
-    });
+		// add a delay to torture the connection logic a little
+		setTimeout(function () {
+	    Hail({
+	        add: function (a, b, done) {
+	            done(a + b);
+	        },
+	        read: function (key, done) {
+	            done(JSON.parse(storage[key]));
+	        },
+	        write: function (key, val) {
+	            storage[key] = JSON.stringify(val);
+	        },
+	        delayedAdd: function (a, b, done) {
+	            setTimeout(function () {
+	                done(a+b);
+	            }, 100);
+	        },
+	        ping: function (done) {
+	            done();
+	        },
+	        echo: function (arg, done) {
+	            done(arg);
+	        }
+	    });
+		}, 100);
 
 
     </script>
