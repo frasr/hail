@@ -19,7 +19,6 @@
         // Get `win` from `url` or `iframe`.
         // To fight xss, we only accept messages from the same domain
         // as `url` or `iframe.src`.
-
         if (typeof args[0] === "string") {
             url = args.shift();
             domready(function () {
@@ -27,7 +26,7 @@
                 domain = domainFromURL(iframe.src);
                 win = iframe.contentWindow;
             });
-        } else if (args[0].tagName === "iframe") {
+        } else if (args[0].tagName && args[0].tagName.toLowerCase()  === "iframe") {
             var iframe = args.shift();
             win = iframe.contentWindow;
             domain = domainFromURL(iframe.src)

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Server</title>
+    <script src="../hail.js"></script>
+    <script>
+
+		var storage = {};
+
+    Hail({
+      echo: function (arg, done) {
+          done(arg);
+      }
+    },function (api) {
+			api.callback({worked:"yes"});
+    });
+
+
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
