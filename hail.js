@@ -9,8 +9,8 @@
 
     root.Hail = function (url, api, onConnect) {
 
-        // We'll handle arguments ourselves
-        var win, domain, args = slice(arguments);
+        // We'll handle arguments ourselves.
+        var win, domain, args = [].slice.call(arguments);
         url = api = onConnect = undefined;
 
         // Process arguments
@@ -36,12 +36,14 @@
             domain = domainFromURL(document.referrer);
         }
 
-        // Get `api`
+        // Get `api`.
         if (typeof args[0] === "object") {
             api = args.shift();
+        } else {
+            api = {};
         }
 
-        // Get `onConnect()` callback
+        // Get `onConnect()` callback.
         onConnect = args.shift();
 
         // Set up lookup table for local API
@@ -52,10 +54,11 @@
         var lut = {};
 
         // Add local API to `lut`.
-        if (api) Object.keys(api).forEach(function (key) {
-            lut[key] = api[key];
-        });
-
+        for (var functionName in api) {
+            if (api.hasOwnProperty(functionName)) {
+                lut[functionName] = api[functionName];
+            }
+        }
         // Add handhake handler to `lut`.
         lut["$handshake"] = handshake;
 
@@ -65,13 +68,13 @@
 
         // Respond to incoming handshake by building local stubs, sending our own API.
         function handshake(remoteAPI, isResponse, debug) {
-            // If the other is debugging, enter debug mode too
+            // If the other is debugging, enter debug mode too.
             Hail.debug = Hail.debug || debug;
 
             // Build a single stub function.
             function makeStub(name) {
                 return function () {
-                    var args = slice(arguments), callbackID = luid();
+                    var args = [].slice.call(arguments), callbackID = luid();
                     if (typeof args[args.length-1] === "function") {
                         var cb = args.pop();
                         // Register one-time-use return callback.
@@ -100,9 +103,14 @@
             if (!isResponse) sendHandshake(true);
         }
 
-        // Helper to send handshake with local API, if present
+        // Helper to send handshake with local API, if present.
         function sendHandshake(isResponse) {
-            var names = api ? Object.keys(api) : []
+            var names = [];
+            for (var functionName in api) {
+                if (api.hasOwnProperty(functionName)) {
+                    names.push(functionName);
+                }
+            }
             send("$handshake", [names, isResponse, Hail.debug]);
         }
 
@@ -112,16 +120,8 @@
         // -----------------------------------------------
 
         // IE9 `postMessage` only supports strings.
-
-        //     TODO: nicer browser detection.
-        function isIE() {
-          var myNav = navigator.userAgent.toLowerCase();
-          return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : Infinity;
-        }
-        var oldIE = isIE() && isIE() < 10;
-
-        function pack(obj) { return oldIE ? JSON.stringify(obj) : obj; }
-        function unpack(val) { return oldIE ? JSON.parse(val) : val; }
+        function pack(obj) { return oldIE() ? JSON.stringify(obj) : obj; }
+        function unpack(val) { return oldIE() ? JSON.parse(val) : val; }
 
         // Send function call as message.
         function send(name,args,callbackID) {
@@ -132,7 +132,7 @@
 
         // Recieve message, do security checks, and call function.
         function receive(e) {
-            var data = unpack(e.data), args = slice(data.args);
+            var data = unpack(e.data), args = data.args;
             if (e.source !== win) return;
             if (domain && domain !== e.origin) return;
 
@@ -144,7 +144,7 @@
             // Call it or complain that it's missing.
             if (fn) {
                 if (data.cb) args.push(function (cbArgs) {
-                    send(data.cb, slice(arguments));
+                    send(data.cb, [].slice.call(arguments));
                 });
                 fn.apply({event:e},args);
             } else {
@@ -155,8 +155,8 @@
         // Start it
         // --------
 
-        // Listen for messages.
-        window.addEventListener("message", receive, true);
+        // Start listening for messages.
+        addEvent(window, "message", receive, true);
 
         // Send initial handshake.
         domready(function () {
@@ -176,8 +176,14 @@
     // Given a URL, find the domain for postMessage.
     function domainFromURL(url) { return url.match(/^(\w+:\/\/[^\/]+|)/)[1].toLowerCase(); }
 
-    // Distilled from domready (c)Dustin Diaz 2014 - License MIT.
-    function domready(fn) {/^loaded|^c/.test(document.readyState) ? fn() : document.addEventListener("DOMContentLoaded",fn);}
+    // Handle IE8 addEventListener insanity.
+    function addEvent(obj,event,fn) { obj.addEventListener ? obj.addEventListener(event,fn) : obj.attachEvent("on"+event,fn); }
+
+    // Use 'setTimeout()' for domready because it works well with IE8.
+    function domready(fn) { /^loaded|^c/.test(document.readyState) ? fn() : setTimeout(fn,0); }
+
+    // Detect old versions of Internet Explorer.
+    function oldIE() { return /MSIE [1-9]/.test(navigator.userAgent); }
 
     // Open a hidden `iframe` with the given URL.
     function makeIFrame(url) {
@@ -190,14 +196,12 @@
 
     // If `Hail.debug` is true, output logging info.
     function log() {
-        // In IE9 and earlier, console only exists when the debugger is open because Microsoft
-        if (!window.console) return;
-
-        // In IE9 and earlier, console.log doesn't support apply() because Microsoft
-        var smartLog = Function.prototype.bind.call(console.log,console);
-
-        var isTop = (window === top), clientName = isTop ? "Top" : "IFrame";
-        smartLog.apply(console,[clientName+":"].concat(slice(arguments)));
+        var msg = [(window === window.top) ? "Top:" : "IFrame:"].concat([].slice.call(arguments));
+        if (oldIE()) {
+            window.console && console.log(JSON.stringify(msg));
+        } else {
+            console.log.apply(console, msg)
+        }
     }
 
 })(window);

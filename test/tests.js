@@ -12,7 +12,7 @@ asyncTest("Client-server", function(assert) {
     Hail("server.html",function (api) {
         api.add(3,4,function (sum) {equal(sum,7,"function returns value")});
 
-        var now = Date.now();
+        var now = +new Date();
         api.write("date",now);
         api.read("date",function (date) {equal(date,now,"can write to localStorage and read after")});
 

@@ -5,15 +5,17 @@
     <script src="../hail.js"></script>
     <script>
 
+		var storage = {};
+
     Hail({
         add: function (a, b, done) {
             done(a + b);
         },
         read: function (key, done) {
-            done(JSON.parse(localStorage[key]));
+            done(JSON.parse(storage[key]));
         },
         write: function (key, val) {
-            localStorage[key] = JSON.stringify(val);
+            storage[key] = JSON.stringify(val);
         },
         delayedAdd: function (a, b, done) {
             setTimeout(function () {
