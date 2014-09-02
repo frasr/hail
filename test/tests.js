@@ -91,12 +91,20 @@ if(!oldIE()) {
         // IE versions before 10 only support string values for postMessage,
         // so they don't get the nice errors thrown when non-JSON values are sent.
         asyncTest("PostMessage errors", function(assert) {
-            expect(2);
+            expect(3);
             assert.throws(function () {
                 api.echo(alert,function () {
                     assert.ok(false,"Callback should not be called");
                 });
             },"throws error when passing functions");
+
+            var err = new Error("Trouble");
+            assert.throws(function () {
+                api.echo(err,function (returned) {
+                    deepEqual(err, returned, "can pass Error() objects");
+                });
+            },"throws error when passing Error() objects");
+
 
             assert.throws(function () {
                 api.echo({fn:alert});
