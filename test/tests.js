@@ -86,30 +86,6 @@ asyncTest("static iframe", function(assert) {
     });
 });
 
-var blob = new Blob(['<a id="a"><b id="b">hey!</b></a>'], {type : 'text/html'});
-var reader = new window.FileReader();
-reader.readAsDataURL(blob);
-reader.onloadend = function() {
-    base64data = reader.result;
-    console.log("***********************",base64data);
-}
-
-
-function logBlob(blob) {
-    var reader = new window.FileReader();
-    reader.readAsDataURL(blob);
-    reader.onloadend = function() {
-        base64data = reader.result;
-        console.log("***********************",base64data);
-    }
-}
-
-
-Hail("export-only.html",function (api) {
-});
-
-
-
 if(!oldIE()) {
     Hail("export-only.html",function (api) {
         // IE versions before 10 only support string values for postMessage,
