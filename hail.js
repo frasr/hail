@@ -192,6 +192,7 @@
 
     // If `Hail.debug` is true, output logging info.
     function log() {
+        if (!Hail.debug) return;
         var msg = [(window === window.top) ? "Top:" : "IFrame:"].concat([].slice.call(arguments));
         if (oldIE()) {
             window.console && console.log(JSON.stringify(msg));

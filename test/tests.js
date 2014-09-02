@@ -1,10 +1,7 @@
 Hail.debug = true;
 
-function isIE() {
-  var myNav = navigator.userAgent.toLowerCase();
-  return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : Infinity;
-}
-var oldIE = isIE() && isIE() < 10;
+// Detect old versions of Internet Explorer.
+function oldIE() { return /MSIE [1-9]/.test(navigator.userAgent); }
 
 asyncTest("export-only server", function(assert) {
     expect(6);
@@ -89,12 +86,36 @@ asyncTest("static iframe", function(assert) {
     });
 });
 
-if(!oldIE) {
-    // Older IE versions only support string values for postMessage,
-    // so they don't get the nice errors thrown when non-JSON values are sent.
-    asyncTest("PostMessage errors", function(assert) {
-        expect(2);
-        Hail("export-only.html",function (api) {
+var blob = new Blob(['<a id="a"><b id="b">hey!</b></a>'], {type : 'text/html'});
+var reader = new window.FileReader();
+reader.readAsDataURL(blob);
+reader.onloadend = function() {
+    base64data = reader.result;
+    console.log("***********************",base64data);
+}
+
+
+function logBlob(blob) {
+    var reader = new window.FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = function() {
+        base64data = reader.result;
+        console.log("***********************",base64data);
+    }
+}
+
+
+Hail("export-only.html",function (api) {
+});
+
+
+
+if(!oldIE()) {
+    Hail("export-only.html",function (api) {
+        // IE versions before 10 only support string values for postMessage,
+        // so they don't get the nice errors thrown when non-JSON values are sent.
+        asyncTest("PostMessage errors", function(assert) {
+            expect(2);
             assert.throws(function () {
                 api.echo(alert,function () {
                     assert.ok(false,"Callback should not be called");
@@ -106,6 +127,32 @@ if(!oldIE) {
             },"throws error when passing functions in objects");
 
             start();
+        });
+
+        // IE versions before 10 don't support typed arrays or blobs
+        asyncTest("Typed data", function(assert) {
+            expect(3);
+            var buf = new ArrayBuffer(10);
+            var view = new Uint8Array(buf);
+            var blob = new Blob(['<a id="a"><b id="b">hey!</b></a>'], {type : 'text/html'});
+
+
+            for (var i = 0; i < view.length; i++) {
+                view[i] = i;
+            }
+
+            api.echo(view,function (returned) {
+                deepEqual(view,returned,"can pass Uint8Array");
+            });
+
+            api.echo(buf,function (returned) {
+                deepEqual(buf,returned,"can pass ArrayBuffer");
+            });
+
+            api.echo(blob,function (returned) {
+                deepEqual(blob,returned,"can pass blob");
+                start();
+            });
         });
     });
 }
