@@ -1,4 +1,4 @@
-Hail.debug = true;
+// Hail.debug = true;
 
 // Detect old versions of Internet Explorer.
 function oldIE() { return /MSIE [1-9]/.test(navigator.userAgent); }
@@ -39,11 +39,15 @@ Hail("export-only.html",function (api) {
 });
 
 asyncTest("import-only server", function(assert) {
-    expect(1);
+    expect(2);
 
     Hail("import-only.html",{
         callback: function (arg) {
             equal(arg.worked,"yes","Server calls local api function");
+        },
+        oneWay: function (done) {
+            done();
+            assert.ok(true,"Callbacks are present even if nobody's listening");
             start();
         }
     });
@@ -59,7 +63,6 @@ asyncTest("import-export server", function(assert) {
             if (!--remaining) start();
         }
     }, function (api) {
-        console.log(api);
         api.echo("hi", function (val) {
             equal(val,"hi","Server's api works");
             if (!--remaining) start();
@@ -78,7 +81,6 @@ asyncTest("static iframe", function(assert) {
             if (!--remaining) start();
         }
     }, function (api) {
-        console.log(api);
         api.echo("hi", function (val) {
             equal(val,"hi","Server's api works");
             if (!--remaining) start();
